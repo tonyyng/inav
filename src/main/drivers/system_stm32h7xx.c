@@ -39,25 +39,49 @@ void forcedSystemResetWithoutDisablingCaches(void)
 
 void enableGPIOPowerUsageAndNoiseReductions(void)
 {
-    // TODO
+	__HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_RCC_D2SRAM1_CLK_ENABLE();
+    __HAL_RCC_D2SRAM2_CLK_ENABLE();
+    __HAL_RCC_D2SRAM3_CLK_ENABLE();
 }
 
 bool isMPUSoftReset(void)
 {
-    // TODO
+    if (cachedRccCsrValue & RCC_RSR_SFTRSTF)
+        return true;
+    else
+        return false;
 }
 
+#define SYSMEMBOOT_VECTOR_TABLE ((uint32_t *)0x1ff09800)
 uint32_t systemBootloaderAddress(void)
 {
-    // TODO
+    return SYSMEMBOOT_VECTOR_TABLE[1];
 }
 
 void systemClockSetup(uint8_t cpuUnderclock)
 {
-    // TODO
+    (void)cpuUnderclock;
+    // This is a stub
 }
 
 void systemInit(void)
 {
-    // TODO
+    checkForBootLoaderRequest();
+
+    // Configure NVIC preempt/priority groups
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITY_GROUPING);
+
+    // cache RCC->CSR value to use it in isMPUSoftreset() and others
+    cachedRccCsrValue = RCC->CSR;
+
+    enableGPIOPowerUsageAndNoiseReductions();
+
+    // Init cycle counter
+    cycleCounterInit();
+
+    // SysTick
+    //SysTick_Config(SystemCoreClock / 1000);
+    HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 }

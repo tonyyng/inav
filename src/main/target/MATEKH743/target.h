@@ -24,7 +24,7 @@
 #define LED0                    PD10
 #define LED1                    PD11
 
-#define BEEPER                  PB9
+#define BEEPER                  PA15
 #define BEEPER_INVERTED
 
 
@@ -32,8 +32,6 @@
 
 // *************** UART *****************************
 #define USE_VCP
-#define USB_DETECT_PIN          PA15
-#define USE_USB_DETECT
 
 #define USE_UART1
 #define UART1_TX_PIN            PA9

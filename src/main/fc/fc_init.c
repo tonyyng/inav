@@ -519,6 +519,8 @@ void init(void)
     owInit();
 #endif
 
+    //while(1) { LED1_TOGGLE; LED0_TOGGLE; delay(100); BEEP_ON; delay(1); BEEP_OFF; }
+
     if (!sensorsAutodetect()) {
         // if gyro was not detected due to whatever reason, we give up now.
         failureMode(FAILURE_MISSING_ACC);

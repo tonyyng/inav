@@ -1,18 +1,18 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of INAV.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
+ * INAV is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
+ * INAV is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with INAV.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -39,31 +39,31 @@ typedef struct uartDevice_s {
     ioTag_t tx;
     volatile uint8_t rxBuffer[UART_RX_BUFFER_SIZE];
     volatile uint8_t txBuffer[UART_TX_BUFFER_SIZE];
-    uint32_t rcc_ahb1;
-    rccPeriphTag_t rcc_apb2;
-    rccPeriphTag_t rcc_apb1;
-    uint8_t af;
+    rccPeriphTag_t rcc;
+    uint8_t af_rx;
+    uint8_t af_tx;
     uint8_t irq;
-    uint32_t irqPriority;
 } uartDevice_t;
 
+#define UART_PIN_AF_HELPER(uart, pin)  CONCAT4(UART_PIN_AF_UART, uart, _, pin)
+
 #ifdef USE_UART1
+#define UART_PIN_AF_UART1_PA9       GPIO_AF7_USART1
+#define UART_PIN_AF_UART1_PA10      GPIO_AF7_USART1
+#define UART_PIN_AF_UART1_PB6       GPIO_AF4_USART1
+#define UART_PIN_AF_UART1_PB7       GPIO_AF4_USART1
+#define UART_PIN_AF_UART1_PB14      GPIO_AF4_USART1
+#define UART_PIN_AF_UART1_PB15      GPIO_AF4_USART1
+
 static uartDevice_t uart1 =
 {
     .dev = USART1,
     .rx = IO_TAG(UART1_RX_PIN),
     .tx = IO_TAG(UART1_TX_PIN),
-#ifdef UART1_AF
-    .af = UART_AF(USART1, UART1_AF),
-#else
-    .af = GPIO_AF7_USART1,
-#endif
-#ifdef UART1_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART1_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb2 = RCC_APB2(USART1),
+    .af_rx = UART_PIN_AF_HELPER(1, UART1_RX_PIN),
+    .af_tx = UART_PIN_AF_HELPER(1, UART1_TX_PIN),
+    .rcc = RCC_APB2(USART1),
     .irq = USART1_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
@@ -73,17 +73,10 @@ static uartDevice_t uart2 =
     .dev = USART2,
     .rx = IO_TAG(UART2_RX_PIN),
     .tx = IO_TAG(UART2_TX_PIN),
-#ifdef UART2_AF
-    .af = UART_AF(USART2, UART2_AF),
-#else
-    .af = GPIO_AF7_USART2,
-#endif
-#ifdef UART2_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART2_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(USART2),
+    .af_rx = GPIO_AF7_USART2,
+    .af_tx = GPIO_AF7_USART2,
+    .rcc = RCC_APB1L(USART2),
     .irq = USART2_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
@@ -93,57 +86,54 @@ static uartDevice_t uart3 =
     .dev = USART3,
     .rx = IO_TAG(UART3_RX_PIN),
     .tx = IO_TAG(UART3_TX_PIN),
-#ifdef UART3_AF
-    .af = UART_AF(USART3, UART3_AF),
-#else
-    .af = GPIO_AF7_USART3,
-#endif
-#ifdef UART3_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART3_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(USART3),
+    .af_rx = GPIO_AF7_USART3,
+    .af_tx = GPIO_AF7_USART3,
+    .rcc = RCC_APB1L(USART3),
     .irq = USART3_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
 #ifdef USE_UART4
+#define UART_PIN_AF_UART4_PA0       GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PA1       GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PA11      GPIO_AF6_UART4
+#define UART_PIN_AF_UART4_PA12      GPIO_AF6_UART4
+#define UART_PIN_AF_UART4_PB8       GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PB9       GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PC10      GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PC11      GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PD0       GPIO_AF8_UART4
+#define UART_PIN_AF_UART4_PD1       GPIO_AF8_UART4
+
 static uartDevice_t uart4 =
 {
     .dev = UART4,
     .rx = IO_TAG(UART4_RX_PIN),
     .tx = IO_TAG(UART4_TX_PIN),
-#ifdef UART4_AF
-    .af = UART_AF(UART4, UART4_AF),
-#else
-    .af = GPIO_AF8_UART4,
-#endif
-#ifdef UART4_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART4_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(UART4),
+    .af_rx = UART_PIN_AF_HELPER(4, UART4_RX_PIN),
+    .af_tx = UART_PIN_AF_HELPER(4, UART4_TX_PIN),
+    .rcc = RCC_APB1L(UART4),
     .irq = UART4_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
 #ifdef USE_UART5
+#define UART_PIN_AF_UART5_PB5       GPIO_AF14_UART5
+#define UART_PIN_AF_UART5_PB6       GPIO_AF14_UART5
+#define UART_PIN_AF_UART5_PB12      GPIO_AF14_UART5
+#define UART_PIN_AF_UART5_PB13      GPIO_AF14_UART5
+#define UART_PIN_AF_UART5_PD2       GPIO_AF8_UART5
+#define UART_PIN_AF_UART5_PC12      GPIO_AF8_UART5
+
 static uartDevice_t uart5 =
 {
     .dev = UART5,
     .rx = IO_TAG(UART5_RX_PIN),
     .tx = IO_TAG(UART5_TX_PIN),
-#ifdef UART5_AF
-    .af = UART_AF(UART5, UART5_AF),
-#else
-    .af = GPIO_AF8_UART5,
-#endif
-#ifdef UART5_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART5_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(UART5),
+    .af_rx = UART_PIN_AF_HELPER(5, UART5_RX_PIN),
+    .af_tx = UART_PIN_AF_HELPER(5, UART5_TX_PIN),
+    .rcc = RCC_APB1L(UART5),
     .irq = UART5_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
@@ -153,56 +143,45 @@ static uartDevice_t uart6 =
     .dev = USART6,
     .rx = IO_TAG(UART6_RX_PIN),
     .tx = IO_TAG(UART6_TX_PIN),
-#ifdef UART6_AF
-    .af = UART_AF(USART6, UART6_AF),
-#else
-    .af = GPIO_AF8_USART6,
-#endif
-#ifdef UART6_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART6_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb2 = RCC_APB2(USART6),
+    .af_rx = GPIO_AF7_USART6,
+    .af_tx = GPIO_AF7_USART6,
+    .rcc = RCC_APB2(USART6),
     .irq = USART6_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
 #ifdef USE_UART7
+#define UART_PIN_AF_UART7_PA8       GPIO_AF11_UART7
+#define UART_PIN_AF_UART7_PA15      GPIO_AF11_UART7
+#define UART_PIN_AF_UART7_PB3       GPIO_AF11_UART7
+#define UART_PIN_AF_UART7_PB4       GPIO_AF11_UART7
+#define UART_PIN_AF_UART7_PE7       GPIO_AF7_UART7
+#define UART_PIN_AF_UART7_PE8       GPIO_AF7_UART7
+#define UART_PIN_AF_UART7_PF6       GPIO_AF7_UART7
+#define UART_PIN_AF_UART7_PF7       GPIO_AF7_UART7
+
 static uartDevice_t uart7 =
 {
     .dev = UART7,
     .rx = IO_TAG(UART7_RX_PIN),
     .tx = IO_TAG(UART7_TX_PIN),
-#ifdef UART7_AF
-    .af = UART_AF(UART7, UART7_AF),
-#else
-    .af = GPIO_AF8_UART7,
-#endif
-#ifdef UART7_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART7_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(UART7),
+    .af_rx = UART_PIN_AF_HELPER(7, UART7_RX_PIN),
+    .af_tx = UART_PIN_AF_HELPER(7, UART7_TX_PIN),
+    .rcc = RCC_APB1L(UART7),
     .irq = UART7_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
+
 #ifdef USE_UART8
 static uartDevice_t uart8 =
 {
     .dev = UART8,
     .rx = IO_TAG(UART8_RX_PIN),
     .tx = IO_TAG(UART8_TX_PIN),
-#ifdef UART8_AF
-    .af = UART_AF(UART8, UART8_AF),
-#else
-    .af = GPIO_AF8_UART8,
-#endif
-#ifdef UART8_AHB1_PERIPHERALS
-    .rcc_ahb1 = UART8_AHB1_PERIPHERALS,
-#endif
-    .rcc_apb1 = RCC_APB1(UART8),
+    .af_rx = GPIO_AF8_UART8,
+    .af_tx = GPIO_AF8_UART8,
+    .rcc = RCC_APB1L(UART8),
     .irq = UART8_IRQn,
-    .irqPriority = NVIC_PRIO_SERIALUART
 };
 #endif
 
@@ -250,6 +229,20 @@ static uartDevice_t* uartHardwareMap[] = {
     NULL,
 #endif
 };
+
+void uartGetPortPins(UARTDevice_e device, serialPortPins_t * pins)
+{
+    uartDevice_t *uart = uartHardwareMap[device];
+
+    if (uart) {
+        pins->txPin = uart->tx;
+        pins->rxPin = uart->rx;
+    }
+    else {
+        pins->txPin = IO_TAG(NONE);
+        pins->rxPin = IO_TAG(NONE);
+    }
+}
 
 void uartIrqHandler(uartPort_t *s)
 {
@@ -317,20 +310,6 @@ void uartIrqHandler(uartPort_t *s)
     }
 }
 
-void uartGetPortPins(UARTDevice_e device, serialPortPins_t * pins)
-{
-    uartDevice_t *uart = uartHardwareMap[device];
-
-    if (uart) {
-        pins->txPin = uart->tx;
-        pins->rxPin = uart->rx;
-    }
-    else {
-        pins->txPin = IO_TAG(NONE);
-        pins->rxPin = IO_TAG(NONE);
-    }
-}
-
 uartPort_t *serialUART(UARTDevice_e device, uint32_t baudRate, portMode_t mode, portOptions_t options)
 {
     uartPort_t *s;
@@ -357,21 +336,21 @@ uartPort_t *serialUART(UARTDevice_e device, uint32_t baudRate, portMode_t mode, 
 
     if (options & SERIAL_BIDIR) {
         IOInit(tx, OWNER_SERIAL, RESOURCE_UART_TXRX, RESOURCE_INDEX(device));
-        IOConfigGPIOAF(tx, IOCFG_AF_PP, uart->af);
+        IOConfigGPIOAF(tx, IOCFG_AF_PP, uart->af_tx);
     }
     else {
         if (mode & MODE_TX) {
             IOInit(tx, OWNER_SERIAL, RESOURCE_UART_TX, RESOURCE_INDEX(device));
-            IOConfigGPIOAF(tx, IOCFG_AF_PP, uart->af);
+            IOConfigGPIOAF(tx, IOCFG_AF_PP, uart->af_tx);
         }
 
         if (mode & MODE_RX) {
             IOInit(rx, OWNER_SERIAL, RESOURCE_UART_RX, RESOURCE_INDEX(device));
-            IOConfigGPIOAF(rx, IOCFG_AF_PP, uart->af);
+            IOConfigGPIOAF(rx, IOCFG_AF_PP, uart->af_rx);
         }
     }
 
-    HAL_NVIC_SetPriority(uart->irq, uart->irqPriority, 0);
+    HAL_NVIC_SetPriority(uart->irq, NVIC_PRIO_SERIALUART, 0);
     HAL_NVIC_EnableIRQ(uart->irq);
 
     return s;

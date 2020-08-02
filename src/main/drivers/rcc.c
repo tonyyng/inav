@@ -1,4 +1,4 @@
-
+#include "build/debug.h"
 #include "platform.h"
 #include "rcc.h"
 

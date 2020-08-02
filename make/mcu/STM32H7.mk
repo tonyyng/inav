@@ -183,6 +183,9 @@ MCU_COMMON_SRC = \
             drivers/timer.c \
             drivers/timer_stm32h7xx.c \
             drivers/timer_impl_hal.c \
+            drivers/serial_uart_stm32h7xx.c \
+            drivers/serial_softserial.c \
+            drivers/serial_uart_hal.c \
 #            drivers/accgyro/accgyro.c \
 #            drivers/accgyro/accgyro_mpu.c \
 #            drivers/adc_stm32h7xx.c \
@@ -190,9 +193,6 @@ MCU_COMMON_SRC = \
 #            drivers/dma_stm32h7xx.c \
 #            drivers/bus_spi_hal.c \
 #            drivers/uart_inverter.c \
-#            drivers/serial_uart_stm32h7xx.c \
-#            drivers/serial_softserial.c \
-#            drivers/serial_uart_hal.c \
 #            drivers/sdcard/sdmmc_sdio_h7xx.c
 
 MCU_EXCLUDES = \
