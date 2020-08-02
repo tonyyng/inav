@@ -3,7 +3,7 @@
 #
 
 ifeq ($(OPBL),yes)
-LD_SCRIPT = $(LINKER_DIR)/stm32_flash_F303_$(FLASH_SIZE)k_opbl.ld
+LD_SCRIPT = $(LINKER_DIR)/stm32_flash_F303_$(MCU_FLASH_SIZE)k_opbl.ld
 endif
 
 TARGET_FLASH   := 256
@@ -47,7 +47,7 @@ INCLUDE_DIRS    := $(INCLUDE_DIRS) \
 VPATH           := $(VPATH):$(FATFS_DIR)
 endif
 
-LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_F303_$(FLASH_SIZE)k.ld
+LD_SCRIPT       = $(LINKER_DIR)/stm32_flash_F303_$(MCU_FLASH_SIZE)k.ld
 
 ARCH_FLAGS      = -mthumb -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion
 DEVICE_FLAGS    = -DSTM32F303xC -DSTM32F303
@@ -65,6 +65,7 @@ VCP_SRC = \
 
 
 MCU_COMMON_SRC = \
+            config/config_streamer_stm32f3.c \
             startup_stm32f30x_md_gcc.S \
             target/system_stm32f30x.c \
             drivers/accgyro/accgyro.c \

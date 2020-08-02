@@ -25,6 +25,8 @@ else ifeq ($(TARGET_MCU_GROUP),STM32F4)
 OPENOCD_TARGET := stm32f4x
 else ifeq ($(TARGET_MCU_GROUP),STM32F7)
 OPENOCD_TARGET := stm32f7x
+else ifeq ($(TARGET_MCU_GROUP),STM32H7)
+OPENOCD_TARGET := stm32h7x
 endif
 endif
 

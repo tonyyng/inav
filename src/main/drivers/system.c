@@ -17,6 +17,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "platform.h"
 
@@ -27,25 +28,6 @@
 #include "drivers/sound_beeper.h"
 #include "drivers/system.h"
 #include "drivers/time.h"
-
-#ifndef EXTI_CALLBACK_HANDLER_COUNT
-#define EXTI_CALLBACK_HANDLER_COUNT 1
-#endif
-
-extiCallbackHandlerConfig_t extiHandlerConfigs[EXTI_CALLBACK_HANDLER_COUNT];
-
-void registerExtiCallbackHandler(IRQn_Type irqn, extiCallbackHandlerFunc *fn)
-{
-    for (int index = 0; index < EXTI_CALLBACK_HANDLER_COUNT; index++) {
-        extiCallbackHandlerConfig_t *candidate = &extiHandlerConfigs[index];
-        if (!candidate->fn) {
-            candidate->fn = fn;
-            candidate->irqn = irqn;
-            return;
-        }
-    }
-    failureMode(FAILURE_DEVELOPER); // EXTI_CALLBACK_HANDLER_COUNT is too low for the amount of handlers required.
-}
 
 // cached value of RCC->CSR
 uint32_t cachedRccCsrValue;
@@ -168,4 +150,15 @@ void failureMode(failureMode_e mode)
     systemResetToBootloader();
 #endif
 #endif //UNIT_TEST
+}
+
+void initialiseMemorySections(void)
+{
+#ifdef USE_ITCM_RAM
+    /* Load functions into ITCM RAM */
+    extern uint8_t tcm_code_start;
+    extern uint8_t tcm_code_end;
+    extern uint8_t tcm_code;
+    memcpy(&tcm_code_start, &tcm_code, (size_t) (&tcm_code_end - &tcm_code_start));
+#endif
 }

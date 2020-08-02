@@ -38,7 +38,7 @@ BUILD_SUFFIX ?=
 SERIAL_DEVICE   ?= $(firstword $(wildcard /dev/ttyUSB*) no-port-found)
 
 # Flash size (KB).  Some low-end chips actually have more flash than advertised, use this to override.
-FLASH_SIZE ?=
+MCU_FLASH_SIZE ?=
 
 ## V                 : Set verbosity level based on the V= parameter
 ##                     V=0 Low
@@ -112,16 +112,16 @@ ifneq ($(FOR_BL),)
 endif
 
 # Configure default flash sizes for the targets (largest size specified gets hit first) if flash not specified already.
-ifeq ($(FLASH_SIZE),)
+ifeq ($(MCU_FLASH_SIZE),)
 ifneq ($(TARGET_FLASH),)
-FLASH_SIZE := $(TARGET_FLASH)
+MCU_FLASH_SIZE := $(TARGET_FLASH)
 else
-$(error FLASH_SIZE not configured for target $(TARGET))
+$(error MCU_FLASH_SIZE not configured for target $(TARGET))
 endif
 endif
 
 # Configure devide and target-specific defines and compiler flags
-DEVICE_FLAGS    := $(DEVICE_FLAGS) -DFLASH_SIZE=$(FLASH_SIZE)
+DEVICE_FLAGS    := $(DEVICE_FLAGS) -DMCU_FLASH_SIZE=$(MCU_FLASH_SIZE)
 TARGET_FLAGS    := $(TARGET_FLAGS) -D$(TARGET_MCU) -D$(TARGET_MCU_GROUP) -D$(TARGET)
 
 ifneq ($(HSE_VALUE),)

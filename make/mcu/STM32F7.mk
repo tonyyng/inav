@@ -157,12 +157,13 @@ TARGET_FLAGS    = -D$(TARGET)
 
 VCP_SRC = \
             vcp_hal/usbd_desc.c \
-            vcp_hal/usbd_conf.c \
+            vcp_hal/usbd_conf_stm32f7xx.c \
             vcp_hal/usbd_cdc_interface.c \
             drivers/serial_usb_vcp.c \
             drivers/usb_io.c
 
 MCU_COMMON_SRC = \
+            config/config_streamer_stm32f7.c \
             target/system_stm32f7xx.c \
             drivers/accgyro/accgyro.c \
             drivers/accgyro/accgyro_mpu.c \

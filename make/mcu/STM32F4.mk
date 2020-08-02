@@ -163,6 +163,7 @@ endif
 DEVICE_FLAGS    += -DHSE_VALUE=$(HSE_VALUE)
 
 MCU_COMMON_SRC = \
+            config/config_streamer_stm32f4.c \
             target/system_stm32f4xx.c \
             drivers/accgyro/accgyro.c \
             drivers/accgyro/accgyro_mpu.c \
