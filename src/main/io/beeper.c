@@ -206,6 +206,12 @@ static const beeperTableEntry_t *currentBeeperEntry = NULL;
  */
 void beeper(beeperMode_e mode)
 {
+    // Permanently enable beeper off when connected to USB
+    if (feature(FEATURE_VBAT) && (getBatteryCellCount() < 2)) {
+        beeperSilence();
+        return;
+    }
+
     if (mode == BEEPER_SILENCE || ((getBeeperOffMask() & (1 << (BEEPER_USB-1))) && (feature(FEATURE_VBAT) && (getBatteryCellCount() < 2)))) {
         beeperSilence();
         return;

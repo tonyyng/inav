@@ -555,6 +555,11 @@ groups:
         default_value: "0"
         min: 0
         max: MAX_SUPPORTED_RC_CHANNEL_COUNT
+      - name: tqly_channel
+        description: "RX channel containing the TQly signal"
+        default_value: "0"
+        min: 0
+        max: MAX_SUPPORTED_RC_CHANNEL_COUNT
       - name: rssi_min
         description: "The minimum RSSI value sent by the receiver, in %. For example, if your receiver's minimum RSSI value shows as 42% in the configurator/OSD set this parameter to 42. See also rssi_max. Note that rssi_min can be set to a value bigger than rssi_max to invert the RSSI calculation (i.e. bigger values mean lower RSSI)."
         default_value: "0"
@@ -2072,6 +2077,11 @@ groups:
         field: general.pos_failure_timeout
         min: 0
         max: 10
+      - name: nav_wp_load_on_boot
+        description: "If set to ON, waypoints will be automatically loaded from EEPROM to the FC during startup.  Default disabled"
+        default_value: "OFF"
+        field: general.waypoint_load_on_boot
+        type: bool
       - name: nav_wp_radius
         description: "Waypoint radius [cm]. Waypoint would be considered reached if machine is within this radius"
         default_value: "100"
@@ -2082,7 +2092,8 @@ groups:
         description: "First waypoint in the mission should be closer than this value [cm]. A value of 0 disables this check."
         default_value: "10000"
         field: general.waypoint_safe_distance
-        max: 65000
+        max: 500000
+        type: uint32_t
       - name: nav_auto_speed
         description: "Maximum velocity firmware is allowed in full auto modes (RTH, WP) [cm/s] [Multirotor only]"
         default_value: "300"
@@ -2185,6 +2196,16 @@ groups:
         default_value: "0"
         field: general.rth_home_altitude
         max: 65000
+      - name: nav_wp_alt_offset
+        description: "The offset amount in meters, used to adjust altitudes in the waypoints."
+        field: general.wp_alt_offset
+        min: 0
+        max: 20
+      - name: nav_rth_failsafe_landing_delay
+        description: "The length of delay in seconds the aircraft will delay after reaching home before landing."
+        field: general.rth_failsafe_landing_delay
+        min: 0
+        max: 300
       - name: safehome_max_distance
         description: "In order for a safehome to be used, it must be less than this distance (in cm) from the arming point."
         default_value: "20000"

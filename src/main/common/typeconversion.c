@@ -19,6 +19,7 @@
 #include <math.h>
 #include "build/build_config.h"
 
+
 #include "maths.h"
 #include "platform.h"
 FILE_COMPILE_FOR_SPEED
@@ -330,3 +331,4 @@ int fastA2I(const char *s)
 
     return sign * num;
 }
+

@@ -52,6 +52,7 @@ FILE_COMPILE_FOR_SPEED
 #include "io/serial.h"
 
 #include "navigation/navigation.h"
+#include "navigation/navigation_private.h"  // for poscontrol - state of navigation
 
 #include "rx/crsf.h"
 #include "rx/rx.h"
@@ -230,7 +231,10 @@ static void crsfFrameVarioSensor(sbuf_t *dst)
     // use sbufWrite since CRC does not include frame length
     sbufWriteU8(dst, CRSF_FRAME_VARIO_SENSOR_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
     crsfSerialize8(dst, CRSF_FRAMETYPE_VARIO_SENSOR);
-    crsfSerialize16(dst, lrintf(getEstimatedActualVelocity(Z)));
+    //crsfSerialize16(dst, lrintf(getEstimatedActualVelocity(Z)));
+    // borrow this to send the wp info
+    const int16_t wp = getWaypointStatus();
+    crsfSerialize16(dst, wp);
 }
 
 /*

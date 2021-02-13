@@ -135,6 +135,7 @@ PG_RESET_TEMPLATE(rxConfig_t, rxConfig,
     .rx_min_usec = RX_MIN_USEX,          // any of first 4 channels below this value will trigger rx loss detection
     .rx_max_usec = 2115,         // any of first 4 channels above this value will trigger rx loss detection
     .rssi_channel = 0,
+    .tqly_channel = 0,
     .rssiMin = RSSI_VISIBLE_VALUE_MIN,
     .rssiMax = RSSI_VISIBLE_VALUE_MAX,
     .sbusSyncInterval = SBUS_DEFAULT_INTERFRAME_DELAY_US,

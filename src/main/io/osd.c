@@ -785,7 +785,7 @@ static const char * navigationStateMessage(void)
             break;
         case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR(OSD_MSG_STARTING_RTH);
-        case MW_NAV_STATE_RTH_CLIMB:            
+        case MW_NAV_STATE_RTH_CLIMB:
             return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
         case MW_NAV_STATE_RTH_ENROUTE:
             return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
@@ -1491,9 +1491,59 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_ALTITUDE_MSL:
         {
-            int32_t alt = osdGetAltitudeMsl();
-            osdFormatAltitudeSymbol(buff, alt);
-            break;
+//            int32_t alt = osdGetAltitudeMsl();
+//            osdFormatAltitudeSymbol(buff, alt);
+//            break;
+             if (posControl.waypointListValid
+                     && posControl.waypointCount > 0
+                     && posControl.activeWaypointIndex > -1
+                     && posControl.activeWaypointIndex < posControl.waypointCount) {
+                 // if WP Mode is off, don't show the current active wp
+                 int prefix = 0;
+                 if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                     prefix = tfp_sprintf(buff
+                                         ,posControl.waypointCount < 10 ? "W%u/%u" : "W%02u/%02u"
+                                         ,posControl.activeWaypointIndex+1
+                                         ,posControl.waypointCount);
+                 } else {
+                     prefix = tfp_sprintf(buff
+                                         ,posControl.waypointCount < 10 ? "W-/%u" : "W--/%02u"
+                                         ,posControl.waypointCount);
+                 }
+                 displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+
+                 // Hack - use the ADJUSTMENT_MANUAL_YAW_RATE adjustment for alt offset
+                 if (isAdjustmentFunctionSelected(ADJUSTMENT_MANUAL_YAW_RATE)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+
+                 // if the altitude was offset, then adjust the previous character as a symbol to
+                 // indicate whether the waypoint altitudes were decreased, or increased
+                 int8_t altFactor = getWaypointAltOffsetFactor();
+                 switch(altFactor) {
+                     case -2: buff[0] = SYM_VARIO_DOWN_2A; break;
+                     case -1: buff[0] = SYM_VARIO_DOWN_1A; break;
+                     case  0: buff[0] = '-'; break;
+                     case +1: buff[0] = SYM_VARIO_UP_1A; break;
+                     case +2: buff[0] = SYM_VARIO_UP_2A; break;
+                 }
+                 buff[1] = '\0';
+                 displayWriteWithAttr(osdDisplayPort, elemPosX + prefix, elemPosY, buff, elemAttr);
+
+                 gpsLocation_t wp2;
+                 int wpi = NAV_Status.state == MW_NAV_STATE_WP_ENROUTE ? posControl.activeWaypointIndex : 0;
+                 wp2.lat = posControl.waypointList[wpi].lat;
+                 wp2.lon = posControl.waypointList[wpi].lon;
+                 wp2.alt = posControl.waypointList[wpi].alt;
+                 wp2.alt += (navConfig()->general.wp_alt_offset * 100 * altFactor);
+                 fpVector3_t poi;
+                 geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, GEO_ALT_RELATIVE);
+                 int dist = calculateDistanceToDestination(&poi);
+                 osdFormatDistanceSymbol(buff, dist);
+                 displayWrite(osdDisplayPort, elemPosX + prefix + 1, elemPosY, buff);
+                 return true;
+             } else {
+                 strcpy(buff, "             ");
+             }
+             break;
         }
 
     case OSD_ONTIME:
@@ -2169,10 +2219,21 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_GFORCE:
         {
-            buff[0] = SYM_GFORCE;
-            osdFormatCentiNumber(buff + 1, GForce, 0, 2, 0, 3);
-            if (GForce > osdConfig()->gforce_alarm * 100) {
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            if (rxConfig()->tqly_channel) {
+                // this should be a channel that is sent the TQly telemetry value
+                int16_t tq = rxGetChannelValue(rxConfig()->tqly_channel - 1);
+                tq =  (constrain(tq, 1500, 1749) - 1500) * 100 / 250;
+                //buff[0] = SYM_WAYPOINT;
+                buff[0] = SYM_HEADING;
+                tfp_sprintf(buff + 1, "%2d", tq);
+                if (tq < osdConfig()->rssi_alarm)
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            } else {
+                buff[0] = SYM_GFORCE;
+                osdFormatCentiNumber(buff + 1, GForce, 0, 2, 0, 3);
+                if (GForce > osdConfig()->gforce_alarm * 100) {
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+                }
             }
             break;
         }
@@ -2425,6 +2486,7 @@ static bool osdDrawSingleElement(uint8_t item)
             return true;
         }
 #endif
+
     case OSD_TPA:
         {
             char buff[4];
@@ -3381,7 +3443,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints
-                        tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);                            
+                        tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
                         // WP hold time countdown in seconds
@@ -3391,8 +3453,8 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
                             messages[messageCount++] = messageBuf;
                         }
-                    } else {                            
-                        const char *navStateMessage = navigationStateMessage();                             
+                    } else {
+                        const char *navStateMessage = navigationStateMessage();
                         if (navStateMessage) {
                             messages[messageCount++] = navStateMessage;
                         }
@@ -3404,6 +3466,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             messages[messageCount++] = launchStateMessage;
                         }
                 } else {
+					if (posControl.firstWaypointTooFar) {
+						messages[messageCount++] = "FIRST WAYPOINT IS TOO FAR";
+						// not sure if this is appropriate way to clear the error
+						posControl.firstWaypointTooFar = false;
+					}
                     if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
                         // ALTHOLD might be enabled alongside ANGLE/HORIZON/ACRO
                         // when it doesn't require ANGLE mode (required only in FW

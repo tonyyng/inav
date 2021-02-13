@@ -229,6 +229,98 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     }
 
     if (ARMING_FLAG(ARMED)) {
+        if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+            // allow stick commands to jump to position
+            // Jump wp is zero-based.  ie. wp 0 is first waypoint
+            int8_t wp = -1;
+            // YAW_LO, ROLL_LO = Left
+            //
+            switch (rcSticks) {
+                case THR_LO + YAW_LO + PIT_HI + ROL_LO:
+                    wp = 0 + 0;
+                    break;
+                case THR_LO + YAW_LO + PIT_HI + ROL_CE:
+                    wp = 0 + 1;
+                    break;
+                case THR_LO + YAW_LO + PIT_HI + ROL_HI:
+                    wp = 0 + 2;
+                    break;
+                case THR_LO + YAW_LO + PIT_CE + ROL_LO:
+                    wp = 0 + 3;
+                    break;
+                case THR_LO + YAW_LO + PIT_CE + ROL_CE:
+                    wp = 0 + 4;
+                    break;
+                case THR_LO + YAW_LO + PIT_CE + ROL_HI:
+                    wp = 0 + 5;
+                    break;
+                case THR_LO + YAW_LO + PIT_LO + ROL_LO:
+                    wp = 0 + 6;
+                    break;
+                case THR_LO + YAW_LO + PIT_LO + ROL_CE:
+                    wp = 0 + 7;
+                    break;
+                case THR_LO + YAW_LO + PIT_LO + ROL_HI:
+                    wp = 0 + 8;
+                    break;
+                case THR_LO + YAW_CE + PIT_HI + ROL_LO:
+                    wp = 10 + 0;
+                    break;
+                case THR_LO + YAW_CE + PIT_HI + ROL_CE:
+                    wp = 10 + 1;
+                    break;
+                case THR_LO + YAW_CE + PIT_HI + ROL_HI:
+                    wp = 10 + 2;
+                    break;
+                case THR_LO + YAW_CE + PIT_CE + ROL_LO:
+                    wp = 10 + 3;
+                    break;
+                case THR_LO + YAW_CE + PIT_CE + ROL_CE:
+                    wp = 10 + 4;
+                    break;
+                case THR_LO + YAW_CE + PIT_CE + ROL_HI:
+                    wp = 10 + 5;
+                    break;
+                case THR_LO + YAW_CE + PIT_LO + ROL_LO:
+                    wp = 10 + 6;
+                    break;
+                case THR_LO + YAW_CE + PIT_LO + ROL_CE:
+                    wp = 10 + 7;
+                    break;
+                case THR_LO + YAW_CE + PIT_LO + ROL_HI:
+                    wp = 10 + 8;
+                    break;
+                case THR_LO + YAW_HI + PIT_HI + ROL_LO:
+                    wp = 20 + 0;
+                    break;
+                case THR_LO + YAW_HI + PIT_HI + ROL_CE:
+                    wp = 20 + 1;
+                    break;
+                case THR_LO + YAW_HI + PIT_HI + ROL_HI:
+                    wp = 20 + 2;
+                    break;
+                case THR_LO + YAW_HI + PIT_CE + ROL_LO:
+                    wp = 20 + 3;
+                    break;
+                case THR_LO + YAW_HI + PIT_CE + ROL_CE:
+                    wp = 20 + 4;
+                    break;
+                case THR_LO + YAW_HI + PIT_CE + ROL_HI:
+                    wp = 20 + 5;
+                    break;
+                case THR_LO + YAW_HI + PIT_LO + ROL_LO:
+                    wp = 20 + 6;
+                    break;
+                case THR_LO + YAW_HI + PIT_LO + ROL_CE:
+                    wp = 20 + 7;
+                    break;
+                case THR_LO + YAW_HI + PIT_LO + ROL_HI:
+                    wp = 20 + 8;
+                    break;
+            }
+            if (wp > -1)
+                jumpToWaypoint(wp);
+        }
         // actions during armed
         return;
     }

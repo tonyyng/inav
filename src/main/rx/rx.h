@@ -120,6 +120,7 @@ typedef struct rxConfig_s {
     uint8_t spektrum_sat_bind;              // number of bind pulses for Spektrum satellite receivers
     uint8_t spektrum_sat_bind_autoreset;    // whenever we will reset (exit) binding mode after hard reboot
     uint8_t rssi_channel;
+    uint8_t tqly_channel;
     uint8_t rssiMin;                        // minimum RSSI sent by the RX - [RSSI_VISIBLE_VALUE_MIN, RSSI_VISIBLE_VALUE_MAX]
     uint8_t rssiMax;                        // maximum RSSI sent by the RX - [RSSI_VISIBLE_VALUE_MIN, RSSI_VISIBLE_VALUE_MAX]
     uint16_t sbusSyncInterval;
@@ -221,5 +222,5 @@ uint16_t rxGetRefreshRate(void);
 
 // Processed RC channel value. These values might include
 // filtering and some extra processing like value holding
-// during failsafe. 
+// during failsafe.
 int16_t rxGetChannelValue(unsigned channelNumber);

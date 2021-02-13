@@ -73,6 +73,9 @@ gpsLocation_t GPS_home;
 uint32_t      GPS_distanceToHome;        // distance to home point in meters
 int16_t       GPS_directionToHome;       // direction to home point in degrees
 
+int8_t wp_alt_offset_factor = 0;         // waypoint altitude offset factor
+int8_t wp_stick_cmd_jump_to = -1;           // stick command requested jump index
+
 radar_pois_t radar_pois[RADAR_MAX_POIS];
 #if defined(USE_SAFE_HOME)
 int8_t safehome_used;                     // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
@@ -113,6 +116,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .pos_failure_timeout = 5,               // 5 sec
         .waypoint_radius = 100,                 // 2m diameter
         .waypoint_safe_distance = 10000,        // centimeters - first waypoint should be closer than this
+        .waypoint_load_on_boot = false,         // load waypoints automatically after boot
         .max_auto_speed = 300,                  // 3 m/s = 10.8 km/h
         .max_auto_climb_rate = 500,             // 5 m/s
         .max_manual_speed = 500,
@@ -127,6 +131,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .rth_abort_threshold = 50000,           // centimeters - 500m should be safe for all aircraft
         .max_terrain_follow_altitude = 100,     // max altitude in centimeters in terrain following mode
         .safehome_max_distance = 20000,         // Max distance that a safehome is from the arming point
+        .wp_alt_offset = 3,
+        .rth_failsafe_landing_delay = 0,        // Seconds to delay before failsafe landing - default zero
         },
 
     // MC-specific
@@ -225,6 +231,7 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint);
 static navigationFSMEvent_t nextForNonGeoStates(void);
+static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint);
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
@@ -565,6 +572,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
             [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_RTH_HOVER_ABOVE_HOME,
+            [NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING]       = NAV_STATE_RTH_LANDING,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
@@ -1299,6 +1307,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
         return NAV_FSM_EVENT_SUCCESS;
     }
 
+    posControl.wpReachedTime = millis();
+
     // If position ok OR within valid timeout - continue
     if ((posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()) {
 
@@ -1336,6 +1346,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(na
 
     if (!(validateRTHSanityChecker() || (posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()))
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+
+    if (navigationRTHAllowsLanding()) {
+        return NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING;
+    }
 
     fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_HOVER);
 
@@ -1437,8 +1451,20 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 
     if (posControl.waypointCount == 0 || !posControl.waypointListValid) {
         return NAV_FSM_EVENT_ERROR;
-    }
-    else {
+    } else {
+        posControl.firstWaypointTooFar = false;
+        if ((navConfig()->general.waypoint_safe_distance != 0)) {
+            fpVector3_t startingWaypointPos;
+            mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0]);
+
+            posControl.firstWaypointTooFar = calculateDistanceToDestination(&startingWaypointPos) > navConfig()->general.waypoint_safe_distance;
+
+            if (posControl.firstWaypointTooFar) {
+                return NAV_FSM_EVENT_ERROR;
+            }
+        }
+
+
         // Prepare controllers
         resetPositionController();
 
@@ -1539,7 +1565,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
-                if (isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
+                if (wp_stick_cmd_jump_to > -1 || isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
                 else {
@@ -1663,6 +1689,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_RTH_LAND(navig
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_NEXT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
+    if (wp_stick_cmd_jump_to > -1) { // did we receive a stick command to change to a certain wp?
+        uint8_t wp = wp_stick_cmd_jump_to;
+        wp_stick_cmd_jump_to = -1;  // reset it regardless of whether we use it
+        // if (wp < posControl.waypointCount && wp != posControl.activeWaypointIndex) {
+        // see if this works
+        if (wp < posControl.waypointCount) {
+            posControl.activeWaypointIndex = wp;
+            return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+        }
+    }
 
     const bool isLastWaypoint = (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST) ||
                           (posControl.activeWaypointIndex >= (posControl.waypointCount - 1));
@@ -2694,6 +2730,32 @@ void resetGCSFlags(void)
     posControl.flags.isGCSAssistedNavigationEnabled = false;
 }
 
+int8_t getWaypointAltOffsetFactor(void) {
+    return wp_alt_offset_factor;
+}
+
+void adjustWaypointAltOffsetFactor(int8_t factor) {
+    timeMs_t currentMillis = millis();
+    static timeMs_t lastAdjust = 0;
+
+    if (currentMillis - lastAdjust < 500)  // ignore duplicate calls when the sticks are held
+        return;
+
+    lastAdjust  = currentMillis;
+
+    int8_t last_factor = wp_alt_offset_factor;
+
+    wp_alt_offset_factor += factor;
+    if (wp_alt_offset_factor < -2)
+        wp_alt_offset_factor = -2;
+    if (wp_alt_offset_factor > 2)
+        wp_alt_offset_factor  = 2;
+
+    // if we changed the factor, use the jump logic to recalc the vector to the next wp (i.e. altitude change)
+    if (wp_alt_offset_factor != last_factor)
+        jumpToWaypoint(posControl.activeWaypointIndex);
+}
+
 void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData)
 {
     /* Default waypoint to send */
@@ -2809,6 +2871,7 @@ void resetWaypointList(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
+        posControl.firstWaypointTooFar = false;
     }
 }
 
@@ -2827,6 +2890,12 @@ bool loadNonVolatileWaypointList(void)
 {
     if (ARMING_FLAG(ARMED))
         return false;
+
+    // if waypoints are already loaded, just unload them.
+    if (posControl.waypointCount > 0) {
+        resetWaypointList();
+        return false;
+    }
 
     resetWaypointList();
 
@@ -2860,6 +2929,34 @@ bool saveNonVolatileWaypointList(void)
 
     return true;
 }
+bool jumpToWaypoint(uint8_t wpNumber) {
+
+    if (posControl.waypointListValid
+             && posControl.waypointCount > 0
+             && wpNumber < posControl.waypointCount
+             && NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+        wp_stick_cmd_jump_to = wpNumber;
+        return true;
+    }
+    return false;
+}
+int16_t getWaypointStatus(void) {
+    // ABCD
+    // AB  : current waypoint
+    //   CD: waypoint count
+    // positive = mission running
+
+    int16_t result = 0;
+    if (posControl.waypointListValid && posControl.waypointCount > 0) {
+        result += posControl.waypointCount;
+        if (posControl.activeWaypointIndex > -1 && posControl.activeWaypointIndex < posControl.waypointCount)
+            result += posControl.activeWaypointIndex * 100;
+    }
+    if (NAV_Status.state != MW_NAV_STATE_WP_ENROUTE) {
+        result *= -1;
+    }
+    return result;
+}
 #endif
 
 #if defined(USE_SAFE_HOME)
@@ -2877,6 +2974,7 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
     wpLLH.lat = waypoint->lat;
     wpLLH.lon = waypoint->lon;
     wpLLH.alt = waypoint->alt;
+    wpLLH.alt += (navConfig()->general.wp_alt_offset * 100 * wp_alt_offset_factor);
 
     geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, GEO_ALT_RELATIVE);
 }
@@ -3298,17 +3396,19 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
     }
 
     // Don't allow arming if first waypoint is farther than configured safe distance
-    if ((posControl.waypointCount > 0) && (navConfig()->general.waypoint_safe_distance != 0)) {
-        fpVector3_t startingWaypointPos;
-        mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0]);
+    if (!navConfig()->general.waypoint_load_on_boot) {
 
-        const bool navWpMissionStartTooFar = calculateDistanceToDestination(&startingWaypointPos) > navConfig()->general.waypoint_safe_distance;
+		if ((posControl.waypointCount > 0) && (navConfig()->general.waypoint_safe_distance != 0)) {
+			fpVector3_t startingWaypointPos;
+			mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0]);
 
-        if (navWpMissionStartTooFar) {
-            return NAV_ARMING_BLOCKER_FIRST_WAYPOINT_TOO_FAR;
-        }
+			const bool navWpMissionStartTooFar = calculateDistanceToDestination(&startingWaypointPos) > navConfig()->general.waypoint_safe_distance;
+
+			if (navWpMissionStartTooFar) {
+				return NAV_ARMING_BLOCKER_FIRST_WAYPOINT_TOO_FAR;
+			}
+		}
     }
-
         /*
          * Don't allow arming if any of JUMP waypoint has invalid settings
          * First WP can't be JUMP
@@ -3520,6 +3620,10 @@ void navigationInit(void)
     } else {
         DISABLE_STATE(FW_HEADING_USE_YAW);
     }
+#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
+    if (navConfig()->general.waypoint_load_on_boot)
+        loadNonVolatileWaypointList();
+#endif
 }
 
 /*-----------------------------------------------------------
@@ -3598,8 +3702,18 @@ bool navigationRTHAllowsLanding(void)
         return true;
 
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
-    return allow == NAV_RTH_ALLOW_LANDING_ALWAYS ||
-        (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
+    if (allow == NAV_RTH_ALLOW_LANDING_ALWAYS)
+        return true;
+
+    if (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE)) {
+        if (navConfig()->general.rth_failsafe_landing_delay == 0)
+            return true;
+        if (posControl.wpReachedTime != 0
+                && millis() - posControl.wpReachedTime >= (navConfig()->general.rth_failsafe_landing_delay * 1000L)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool isNavLaunchEnabled(void)

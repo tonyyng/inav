@@ -36,6 +36,8 @@ extern gpsLocation_t        GPS_home;
 extern uint32_t             GPS_distanceToHome;        // distance to home point in meters
 extern int16_t              GPS_directionToHome;       // direction to home point in degrees
 
+extern int8_t wp_stick_cmd_jump_to;
+
 extern bool autoThrottleManuallyIncreased;
 
 /* Navigation system updates */
@@ -188,7 +190,8 @@ typedef struct navConfig_s {
 
         uint8_t  pos_failure_timeout;           // Time to wait before switching to emergency landing (0 - disable)
         uint16_t waypoint_radius;               // if we are within this distance to a waypoint then we consider it reached (distance is in cm)
-        uint16_t waypoint_safe_distance;        // Waypoint mission sanity check distance
+        uint32_t waypoint_safe_distance;        // Waypoint mission sanity check distance
+        bool     waypoint_load_on_boot;         // load waypoints automatically after boot
         uint16_t max_auto_speed;                // autonomous navigation speed cm/sec
         uint16_t max_auto_climb_rate;           // max vertical speed limitation cm/sec
         uint16_t max_manual_speed;              // manual velocity control max horizontal speed
@@ -203,6 +206,8 @@ typedef struct navConfig_s {
         uint16_t rth_abort_threshold;           // Initiate emergency landing if during RTH we get this much [cm] away from home
         uint16_t max_terrain_follow_altitude;   // Max altitude to be used in SURFACE TRACKING mode
         uint16_t safehome_max_distance;         // Max distance that a safehome is from the arming point
+        uint8_t wp_alt_offset;                  // the offset used for the wp altitudes for the different stick commands
+        uint16_t rth_failsafe_landing_delay;    // Seconds to delay before failsafe landing
     } general;
 
     struct {
@@ -445,6 +450,12 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData);
 void resetWaypointList(void);
 bool loadNonVolatileWaypointList(void);
 bool saveNonVolatileWaypointList(void);
+bool jumpToWaypoint(uint8_t wpNumber);
+int16_t getWaypointStatus(void);
+
+int8_t getWaypointAltOffsetFactor(void);
+void adjustWaypointAltOffsetFactor(int8_t factor);
+
 
 float getFinalRTHAltitude(void);
 int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs);
