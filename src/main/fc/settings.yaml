@@ -2199,11 +2199,13 @@ groups:
       - name: nav_wp_alt_offset
         description: "The offset amount in meters, used to adjust altitudes in the waypoints."
         field: general.wp_alt_offset
+        default_value: "3"
         min: 0
         max: 20
       - name: nav_rth_failsafe_landing_delay
         description: "The length of delay in seconds the aircraft will delay after reaching home before landing."
         field: general.rth_failsafe_landing_delay
+        default_value: "0"
         min: 0
         max: 300
       - name: safehome_max_distance

@@ -337,12 +337,14 @@
 | nav_rth_altitude | 1000 | Used in EXTRA, FIXED and AT_LEAST rth alt modes [cm] (Default 1000 means 10 meters) |
 | nav_rth_climb_first | ON | If set to ON drone will climb to nav_rth_altitude first and head home afterwards. If set to OFF drone will head home instantly and climb on the way. |
 | nav_rth_climb_ignore_emerg | OFF | If set to ON, aircraft will execute initial climb regardless of position sensor (GPS) status. |
+| nav_rth_failsafe_landing_delay | 0 | The length of delay in seconds the aircraft will delay after reaching home before landing. |
 | nav_rth_home_altitude | 0 | Aircraft will climb/descend to this altitude after reaching home if landing is not enabled. Set to 0 to stay at `nav_rth_altitude` (default) [cm] |
 | nav_rth_tail_first | OFF | If set to ON drone will return tail-first. Obviously meaningless for airplanes. |
 | nav_use_fw_yaw_control | OFF | Enables or Disables the use of the heading PID controller on fixed wing. Heading PID controller is always enabled for rovers and boats |
 | nav_use_midthr_for_althold | OFF | If set to OFF, the FC remembers your throttle stick position when enabling ALTHOLD and treats it as a neutral midpoint for holding altitude |
 | nav_user_control_mode | ATTI | Defines how Pitch/Roll input from RC receiver affects flight in POSHOLD mode: ATTI - pitch/roll controls attitude like in ANGLE mode; CRUISE - pitch/roll controls velocity in forward and right direction. |
-| nav_wp_load_on_boot | OFF | If set to ON, any waypoint mission that is stored in EEPROM will be loaded during FC boot.  It can be unloaded using stick commands. |
+| nav_wp_alt_offset | 3 | The offset amount in meters, used to adjust altitudes in the waypoints. |
+| nav_wp_load_on_boot | OFF | If set to ON, waypoints will be automatically loaded from EEPROM to the FC during startup.  Default disabled |
 | nav_wp_radius | 100 | Waypoint radius [cm]. Waypoint would be considered reached if machine is within this radius |
 | nav_wp_safe_distance | 10000 | First waypoint in the mission should be closer than this value [cm]. A value of 0 disables this check. |
 | opflow_hardware |  | Selection of OPFLOW hardware. |
@@ -486,6 +488,7 @@
 | throttle_tilt_comp_str | 0 | Can be used in ANGLE and HORIZON mode and will automatically boost throttle when banking. Setting is in percentage, 0=disabled. |
 | tpa_breakpoint | 1500 | See tpa_rate. |
 | tpa_rate | 0 | Throttle PID attenuation reduces influence of P on ROLL and PITCH as throttle increases. For every 1% throttle after the TPA breakpoint, P is reduced by the TPA rate. |
+| tqly_channel | 0 | RX channel containing the TQly signal |
 | tri_unarmed_servo | ON | On tricopter mix only, if this is set to ON, servo will always be correcting regardless of armed state. to disable this, set it to OFF. |
 | tz_automatic_dst | OFF | Automatically add Daylight Saving Time to the GPS time when needed or simply ignore it. Includes presets for EU and the USA - if you live outside these areas it is suggested to manage DST manually via `tz_offset`. |
 | tz_offset | 0 | Time zone offset from UTC, in minutes. This is applied to the GPS time for logging and time-stamping of Blackbox logs |
