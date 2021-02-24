@@ -2403,6 +2403,7 @@ bool findNearestSafeHome(void)
     fpVector3_t currentSafeHome;
     gpsLocation_t shLLH;
     shLLH.alt = 0;
+
     for (uint8_t i = 0; i < MAX_SAFE_HOMES; i++) {
 		if (!safeHomeConfig(i)->enabled)
 		    continue;
@@ -2453,7 +2454,7 @@ void updateHomePosition(void)
 #if defined(USE_SAFE_HOME)
                 if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
                     findNearestSafeHome();
-			    }
+				}
 #endif
                 setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
                 // save the current location in case it is replaced by a safehome or HOME_RESET
@@ -3230,7 +3231,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
         const bool canActivatePosHold    = canActivatePosHoldMode();
         const bool canActivateNavigation = canActivateNavigationModes();
         const bool isExecutingRTH        = navGetStateFlags(posControl.navState) & NAV_AUTO_RTH;
-        checkSafeHomeState(isExecutingRTH);
+        checkSafeHomeState(isExecutingRTH || posControl.flags.forcedRTHActivated);
 
         // Keep canActivateWaypoint flag at FALSE if there is no mission loaded
         // Also block WP mission if we are executing RTH
@@ -3670,6 +3671,7 @@ void activateForcedRTH(void)
 {
     abortFixedWingLaunch();
     posControl.flags.forcedRTHActivated = true;
+    checkSafeHomeState(true);
     navProcessFSMEvents(selectNavEventFromBoxModeInput());
 }
 

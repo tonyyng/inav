@@ -476,7 +476,12 @@ static void dumpPgValue(const setting_t *value, uint8_t dumpMask)
             cliPrintLinefeed();
         }
         cliPrintf(format, name);
-        printValuePointer(value, valuePointer, 0);
+        // if the craftname has a leading space, then enclose the name in quotes
+        if (strcmp(name, "name") == 0 && ((const char *)valuePointer)[0] == ' ') {
+            cliPrintf("\"%s\"", (const char *)valuePointer);
+        } else {
+            printValuePointer(value, valuePointer, 0);
+        }
         cliPrintLinefeed();
     }
 }
