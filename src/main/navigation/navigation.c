@@ -239,6 +239,7 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
+void updateHomePosition(void);
 
 /*************************************************************************************************/
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState_t previousState);
@@ -2389,6 +2390,8 @@ void checkSafeHomeState(bool shouldBeEnabled)
         setHomePosition(&original_rth_home, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
 		safehome_applied = false;
 	}
+    // if we've changed the home position, update the distance and direction
+    updateHomePosition();
 }
 
 /***********************************************************
