@@ -29,7 +29,7 @@ else()
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/${TOOLCHAIN}-checks.cmake")
 endif()
 
-project(INAV VERSION 2.6.100)
+project(INAV VERSION 2.6.101)
 
 enable_language(ASM)
 
