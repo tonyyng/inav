@@ -2342,7 +2342,8 @@ groups:
         description: "First waypoint in the mission should be closer than this value [cm]. A value of 0 disables this check."
         default_value: 10000
         field: general.waypoint_safe_distance
-        max: 65000
+        max: 500000
+        type: uint32_t
       - name: nav_auto_speed
         description: "Maximum velocity firmware is allowed in full auto modes (RTH, WP) [cm/s] [Multirotor only]"
         default_value: 300

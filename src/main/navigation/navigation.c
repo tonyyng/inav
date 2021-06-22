@@ -1440,6 +1440,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
         return NAV_FSM_EVENT_ERROR;
     }
     else {
+        posControl.firstWaypointTooFar = false;
+        if ((navConfig()->general.waypoint_safe_distance != 0)) {
+            fpVector3_t startingWaypointPos;
+            mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0], GEO_ALT_RELATIVE);
+
+            posControl.firstWaypointTooFar = calculateDistanceToDestination(&startingWaypointPos) > navConfig()->general.waypoint_safe_distance;
+
+            if (posControl.firstWaypointTooFar) {
+                return NAV_FSM_EVENT_ERROR;
+            }
+        }
+
         // Prepare controllers
         resetPositionController();
 
@@ -2862,6 +2874,7 @@ void resetWaypointList(void)
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
         posControl.geoWaypointCount = 0;
+        posControl.firstWaypointTooFar = false;
     }
 }
 

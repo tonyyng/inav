@@ -356,6 +356,7 @@ typedef struct {
     navWaypoint_t               waypointList[NAV_MAX_WAYPOINTS];
     bool                        waypointListValid;
     int8_t                      waypointCount;
+    bool                        firstWaypointTooFar;  // attempted WP Mode and first wp was too far
     int8_t                      geoWaypointCount;  // total geospatial WPs in mission
 
     navWaypointPosition_t       activeWaypoint;    // Local position and initial bearing, filled on waypoint activation
