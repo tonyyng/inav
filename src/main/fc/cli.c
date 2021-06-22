@@ -3539,6 +3539,8 @@ static void printConfig(const char *cmdline, bool doDiff)
 #if defined(USE_NAV) && defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
         cliPrintHashLine("wp");
         printWaypoints(dumpMask, posControl.waypointList, nonVolatileWaypointList(0));
+        if (posControl.waypointCount && posControl.waypointListValid)
+            cliPrintLine("wp save");
 #endif
 
 #ifdef USE_OSD

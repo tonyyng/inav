@@ -92,8 +92,14 @@
 #define INVERTER_PIN_UART2_RX   PC14 // PC14 used as inverter select GPIO
 
 #define USE_SOFTSERIAL1
-#define SOFTSERIAL_1_TX_PIN      PA2 // Workaround for softserial not initializing with only RX
-#define SOFTSERIAL_1_RX_PIN      PA2 // Backdoor timer on UART2_TX, used for ESC telemetry
+
+#if defined(NOX_SS)
+  #define SOFTSERIAL_1_TX_PIN      PB10
+  #define SOFTSERIAL_1_RX_PIN      PA0  // overlaps with LED pin - RX not tested
+#else
+  #define SOFTSERIAL_1_TX_PIN      PA2 // Workaround for softserial not initializing with only RX
+  #define SOFTSERIAL_1_RX_PIN      PA2 // Backdoor timer on UART2_TX, used for ESC telemetry
+#endif
 
 #define SERIAL_PORT_COUNT       4 //VCP, USART1, USART2, SOFTSERIAL1
 
