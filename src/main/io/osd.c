@@ -3904,6 +3904,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             messages[messageCount++] = launchStateMessage;
                         }
                 } else {
+					if (posControl.firstWaypointTooFar) {
+						messages[messageCount++] = "FIRST WAYPOINT IS TOO FAR";
+						// not sure if this is appropriate way to clear the error
+						posControl.firstWaypointTooFar = false;
+					}
                     if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
                         // ALTHOLD might be enabled alongside ANGLE/HORIZON/ACRO
                         // when it doesn't require ANGLE mode (required only in FW
