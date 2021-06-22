@@ -477,7 +477,12 @@ static void dumpPgValue(const setting_t *value, uint8_t dumpMask)
             cliPrintLinefeed();
         }
         cliPrintf(format, name);
-        printValuePointer(value, valuePointer, 0);
+        // if the craftname has a leading space, then enclose the name in quotes
+        if (strcmp(name, "name") == 0 && ((const char *)valuePointer)[0] == ' ') {
+            cliPrintf("\"%s\"", (const char *)valuePointer);
+        } else {
+            printValuePointer(value, valuePointer, 0);
+        }
         cliPrintLinefeed();
     }
 }
@@ -2930,28 +2935,28 @@ static void printImu2Status(void)
     cliPrintLinef("Acc: %d", secondaryImuState.calibrationStatus.acc);
     cliPrintLinef("Mag: %d", secondaryImuState.calibrationStatus.mag);
     cliPrintLine("Calibration gains:");
-    
+
     cliPrintLinef(
-        "Gyro: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetGyro[X], 
-        secondaryImuConfig()->calibrationOffsetGyro[Y], 
+        "Gyro: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetGyro[X],
+        secondaryImuConfig()->calibrationOffsetGyro[Y],
         secondaryImuConfig()->calibrationOffsetGyro[Z]
     );
     cliPrintLinef(
-        "Acc: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetAcc[X], 
-        secondaryImuConfig()->calibrationOffsetAcc[Y], 
+        "Acc: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetAcc[X],
+        secondaryImuConfig()->calibrationOffsetAcc[Y],
         secondaryImuConfig()->calibrationOffsetAcc[Z]
     );
     cliPrintLinef(
-        "Mag: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetMag[X], 
-        secondaryImuConfig()->calibrationOffsetMag[Y], 
+        "Mag: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetMag[X],
+        secondaryImuConfig()->calibrationOffsetMag[Y],
         secondaryImuConfig()->calibrationOffsetMag[Z]
     );
     cliPrintLinef(
-        "Radius: %d %d", 
-        secondaryImuConfig()->calibrationRadiusAcc, 
+        "Radius: %d %d",
+        secondaryImuConfig()->calibrationRadiusAcc,
         secondaryImuConfig()->calibrationRadiusMag
     );
 }
@@ -3013,7 +3018,13 @@ static void cliGet(char *cmdline)
         val = settingGet(i);
         if (settingNameContains(val, name, cmdline)) {
             cliPrintf("%s = ", name);
-            cliPrintVar(val, 0);
+            if (strcmp(name, "name") == 0) {
+                // if the craftname has a leading space, then enclose the name in quotes
+                const char * v = (const char *)settingGetValuePointer(val);
+                cliPrintf(v[0] == ' ' ? "\"%s\"" : "%s", v);
+            } else {
+                cliPrintVar(val, 0);
+            }
             cliPrintLinefeed();
             cliPrintVarRange(val);
             cliPrintLinefeed();
@@ -3071,7 +3082,12 @@ static void cliSet(char *cmdline)
             if (settingNameIsExactMatch(val, name, cmdline, variableNameLength)) {
                 const setting_type_e type = SETTING_TYPE(val);
                 if (type == VAR_STRING) {
-                    settingSetString(val, eqptr, strlen(eqptr));
+                    // if setting the craftname, remove any quotes around the name.  This allows leading spaces in the name
+                    if (strcmp(name, "name") == 0 && eqptr[0] == '"' && eqptr[strlen(eqptr)-1] == '"') {
+                        settingSetString(val, eqptr + 1, strlen(eqptr)-2);
+                    } else {
+                        settingSetString(val, eqptr, strlen(eqptr));
+                    }
                     return;
                 }
                 const setting_mode_e mode = SETTING_MODE(val);
