@@ -3858,7 +3858,7 @@ First waypoint in the mission should be closer than this value [cm]. A value of 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 10000 |  | 65000 |
+| 10000 |  | 500000 |
 
 ---
 
