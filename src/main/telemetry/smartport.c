@@ -43,6 +43,7 @@ FILE_COMPILE_FOR_SPEED
 #include "io/serial.h"
 
 #include "navigation/navigation.h"
+#include "navigation/navigation_private.h"  // for poscontrol - state of navigation
 
 #include "rx/frsky_crc.h"
 
@@ -521,7 +522,13 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 break;
             case FSSP_DATAID_FPV       :
                 if (smartPortShouldSendGPSData()) {
-                    smartPortSendPackage(id, gpsSol.groundCourse); // given in 10*deg
+                    //  hijack this element to send the current waypoint
+                    //  smartPortSendPackage(id, gpsSol.groundCourse); // given in 10*deg
+                    // ABCD
+                    // CD: waypoint count
+                    // AB: current waypoint
+
+                    smartPortSendPackage(id, getWaypointStatus());
                     *clearToSend = false;
                 }
                 break;

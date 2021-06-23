@@ -220,6 +220,7 @@ typedef struct navConfig_s {
         uint16_t rth_abort_threshold;           // Initiate emergency landing if during RTH we get this much [cm] away from home
         uint16_t max_terrain_follow_altitude;   // Max altitude to be used in SURFACE TRACKING mode
         uint16_t safehome_max_distance;         // Max distance that a safehome is from the arming point
+        uint8_t wp_alt_offset;                  // the offset used for the wp altitudes for the different stick commands
         uint16_t max_altitude;                  // Max altitude when in AltHold mode (not Surface Following)
     } general;
 
@@ -469,6 +470,10 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData);
 void resetWaypointList(void);
 bool loadNonVolatileWaypointList(void);
 bool saveNonVolatileWaypointList(void);
+bool jumpToWaypoint(uint8_t wpNumber);
+int16_t getWaypointStatus(void);
+int8_t getWaypointAltOffsetFactor(void);
+void adjustWaypointAltOffsetFactor(int8_t factor);
 
 float getFinalRTHAltitude(void);
 int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs);

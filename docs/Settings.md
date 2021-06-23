@@ -3832,6 +3832,16 @@ Defines how Pitch/Roll input from RC receiver affects flight in POSHOLD mode: AT
 
 ---
 
+### nav_wp_alt_offset
+
+The offset amount in meters, used to adjust altitudes in the waypoints.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 0 | 20 |
+
+---
+
 ### nav_wp_load_on_boot
 
 If set to ON, waypoints will be automatically loaded from EEPROM to the FC during startup.
