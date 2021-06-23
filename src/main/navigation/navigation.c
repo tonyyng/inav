@@ -74,6 +74,9 @@ gpsLocation_t GPS_home;
 uint32_t      GPS_distanceToHome;        // distance to home point in meters
 int16_t       GPS_directionToHome;       // direction to home point in degrees
 
+int8_t wp_alt_offset_factor = 0;         // waypoint altitude offset factor
+int8_t wp_stick_cmd_jump_to = -1;           // stick command requested jump index
+
 fpVector3_t   original_rth_home;         // the original rth home - save it, since it could be replaced by safehome or HOME_RESET
 
 radar_pois_t radar_pois[RADAR_MAX_POIS];
@@ -136,6 +139,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .rth_abort_threshold = SETTING_NAV_RTH_ABORT_THRESHOLD_DEFAULT,               // centimeters - 500m should be safe for all aircraft
         .max_terrain_follow_altitude = SETTING_NAV_MAX_TERRAIN_FOLLOW_ALT_DEFAULT,    // max altitude in centimeters in terrain following mode
         .safehome_max_distance = SETTING_SAFEHOME_MAX_DISTANCE_DEFAULT,               // Max distance that a safehome is from the arming point
+        .wp_alt_offset = SETTING_NAV_WP_ALT_OFFSET_DEFAULT,
         .max_altitude = SETTING_NAV_MAX_ALTITUDE_DEFAULT,
     },
 
@@ -1538,7 +1542,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
-                if (isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
+                if (wp_stick_cmd_jump_to > -1 || isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
                 else {
@@ -1642,6 +1646,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_RTH_LAND(navig
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_NEXT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
+    if (wp_stick_cmd_jump_to > -1) { // did we receive a stick command to change to a certain wp?
+        uint8_t wp = wp_stick_cmd_jump_to;
+        wp_stick_cmd_jump_to = -1;  // reset it regardless of whether we use it
+        // if (wp < posControl.waypointCount && wp != posControl.activeWaypointIndex) {
+        // see if this works
+        if (wp < posControl.waypointCount) {
+            posControl.activeWaypointIndex = wp;
+            return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+        }
+    }
 
     const bool isLastWaypoint = (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST) ||
                           (posControl.activeWaypointIndex >= (posControl.waypointCount - 1));
@@ -2736,6 +2750,32 @@ void resetGCSFlags(void)
     posControl.flags.isGCSAssistedNavigationEnabled = false;
 }
 
+int8_t getWaypointAltOffsetFactor(void) {
+    return wp_alt_offset_factor;
+}
+
+void adjustWaypointAltOffsetFactor(int8_t factor) {
+    timeMs_t currentMillis = millis();
+    static timeMs_t lastAdjust = 0;
+
+    if (currentMillis - lastAdjust < 500)  // ignore duplicate calls when the sticks are held
+        return;
+
+    lastAdjust = currentMillis;
+
+    int8_t last_factor = wp_alt_offset_factor;
+
+    wp_alt_offset_factor += factor;
+    if (wp_alt_offset_factor < -2)
+        wp_alt_offset_factor = -2;
+    if (wp_alt_offset_factor > 2)
+        wp_alt_offset_factor  = 2;
+
+    // if we changed the factor, use the jump logic to recalc the vector to the next wp (i.e. altitude change)
+    if (wp_alt_offset_factor != last_factor)
+        jumpToWaypoint(posControl.activeWaypointIndex);
+}
+
 void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData)
 {
     /* Default waypoint to send */
@@ -2919,6 +2959,36 @@ bool saveNonVolatileWaypointList(void)
 
     return true;
 }
+
+bool jumpToWaypoint(uint8_t wpNumber) {
+
+    if (posControl.waypointListValid
+             && posControl.waypointCount > 0
+             && wpNumber < posControl.waypointCount
+             && NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+        wp_stick_cmd_jump_to = wpNumber;
+        return true;
+    }
+    return false;
+}
+
+int16_t getWaypointStatus(void) {
+    // ABCD
+    // AB  : current waypoint
+    //   CD: waypoint count
+    // positive = mission running
+
+    int16_t result = 0;
+    if (posControl.waypointListValid && posControl.waypointCount > 0) {
+        result += posControl.waypointCount;
+        if (posControl.activeWaypointIndex > -1 && posControl.activeWaypointIndex < posControl.waypointCount)
+            result += posControl.activeWaypointIndex * 100;
+    }
+    if (NAV_Status.state != MW_NAV_STATE_WP_ENROUTE) {
+        result *= -1;
+    }
+    return result;
+}
 #endif
 
 #if defined(USE_SAFE_HOME)
@@ -2936,6 +3006,7 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
     wpLLH.lat = waypoint->lat;
     wpLLH.lon = waypoint->lon;
     wpLLH.alt = waypoint->alt;
+    wpLLH.alt += (navConfig()->general.wp_alt_offset * 100 * wp_alt_offset_factor);
 
     geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, altConv);
 }

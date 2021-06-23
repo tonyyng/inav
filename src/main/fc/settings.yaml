@@ -2465,6 +2465,12 @@ groups:
         default_value: 0
         field: general.rth_home_altitude
         max: 65000
+      - name: nav_wp_alt_offset
+        description: "The offset amount in meters, used to adjust altitudes in the waypoints."
+        field: general.wp_alt_offset
+        default_value: 3
+        min: 0
+        max: 20        
       - name: safehome_max_distance
         description: "In order for a safehome to be used, it must be less than this distance (in cm) from the arming point."
         default_value: 20000

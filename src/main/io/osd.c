@@ -1712,9 +1712,59 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_ALTITUDE_MSL:
         {
-            int32_t alt = osdGetAltitudeMsl();
-            osdFormatAltitudeSymbol(buff, alt);
-            break;
+//            int32_t alt = osdGetAltitudeMsl();
+//            osdFormatAltitudeSymbol(buff, alt);
+//            break;
+             if (posControl.waypointListValid
+                     && posControl.waypointCount > 0
+                     && posControl.activeWaypointIndex > -1
+                     && posControl.activeWaypointIndex < posControl.waypointCount) {
+                 // if WP Mode is off, don't show the current active wp
+                 int prefix = 0;
+                 if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                     prefix = tfp_sprintf(buff
+                                         ,posControl.waypointCount < 10 ? "W%u/%u" : "W%02u/%02u"
+                                         ,posControl.activeWaypointIndex+1
+                                         ,posControl.waypointCount);
+                 } else {
+                     prefix = tfp_sprintf(buff
+                                         ,posControl.waypointCount < 10 ? "W-/%u" : "W--/%02u"
+                                         ,posControl.waypointCount);
+                 }
+                 displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+
+                 // Hack - use the ADJUSTMENT_MANUAL_YAW_RATE adjustment for alt offset
+                 if (isAdjustmentFunctionSelected(ADJUSTMENT_MANUAL_YAW_RATE)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+
+                 // if the altitude was offset, then adjust the previous character as a symbol to
+                 // indicate whether the waypoint altitudes were decreased, or increased
+                 int8_t altFactor = getWaypointAltOffsetFactor();
+                 switch(altFactor) {
+                     case -2: buff[0] = SYM_VARIO_DOWN_2A; break;
+                     case -1: buff[0] = SYM_VARIO_DOWN_1A; break;
+                     case  0: buff[0] = '-'; break;
+                     case +1: buff[0] = SYM_VARIO_UP_1A; break;
+                     case +2: buff[0] = SYM_VARIO_UP_2A; break;
+                 }
+                 buff[1] = '\0';
+                 displayWriteWithAttr(osdDisplayPort, elemPosX + prefix, elemPosY, buff, elemAttr);
+
+                 gpsLocation_t wp2;
+                 int wpi = NAV_Status.state == MW_NAV_STATE_WP_ENROUTE ? posControl.activeWaypointIndex : 0;
+                 wp2.lat = posControl.waypointList[wpi].lat;
+                 wp2.lon = posControl.waypointList[wpi].lon;
+                 wp2.alt = posControl.waypointList[wpi].alt;
+                 wp2.alt += (navConfig()->general.wp_alt_offset * 100 * altFactor);
+                 fpVector3_t poi;
+                 geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, GEO_ALT_RELATIVE);
+                 int dist = calculateDistanceToDestination(&poi);
+                 osdFormatDistanceSymbol(buff, dist, 0);
+                 displayWrite(osdDisplayPort, elemPosX + prefix + 1, elemPosY, buff);
+                 return true;
+             } else {
+                 strcpy(buff, "             ");
+             }
+             break;
         }
 
 #ifdef USE_RANGEFINDER

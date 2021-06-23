@@ -425,6 +425,10 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             schedulePidGainsUpdate();
             break;
         case ADJUSTMENT_MANUAL_YAW_RATE:
+            if (true) {
+                adjustWaypointAltOffsetFactor(delta > 0 ? 1 : -1); // seemed more natural to make this backward
+                break;
+            }
             applyAdjustmentManualRate(ADJUSTMENT_MANUAL_YAW_RATE, &controlRateConfig->manual.rates[FD_YAW], delta);
             break;
         case ADJUSTMENT_PITCH_ROLL_P:
